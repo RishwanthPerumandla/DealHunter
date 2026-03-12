@@ -1,21 +1,48 @@
-import * as React from "react"
+'use client';
 
-import { cn } from "@/lib/utils"
+import { InputHTMLAttributes, forwardRef } from 'react';
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
-  return (
-    <input
-      type={type}
-      data-slot="input"
-      className={cn(
-        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-        className
-      )}
-      {...props}
-    />
-  )
+interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: string;
+  helperText?: string;
 }
 
-export { Input }
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, helperText, className = '', ...props }, ref) => {
+    return (
+      <div className="w-full">
+        {label && (
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            {label}
+            {props.required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+        )}
+        <input
+          ref={ref}
+          className={`
+            w-full px-4 py-3 rounded-xl border-2 transition-all duration-200
+            placeholder:text-gray-400
+            focus:outline-none focus:ring-2 focus:ring-offset-0
+            ${error 
+              ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
+              : 'border-gray-200 focus:border-[#FF9933] focus:ring-orange-100'
+            }
+            ${className}
+          `}
+          {...props}
+        />
+        {error && (
+          <p className="mt-1.5 text-sm text-red-600">{error}</p>
+        )}
+        {helperText && !error && (
+          <p className="mt-1.5 text-sm text-gray-500">{helperText}</p>
+        )}
+      </div>
+    );
+  }
+);
+
+Input.displayName = 'Input';
+
+export default Input;
