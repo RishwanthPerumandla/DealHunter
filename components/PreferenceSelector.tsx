@@ -8,48 +8,26 @@ import PreferenceModal, {
   CuisinePreference 
 } from './PreferenceModal';
 import { trackEvent, AnalyticsEvents } from '@/lib/utils/analytics';
-import { hasPreferenceBeenPrompted, markPreferencePrompted } from '@/lib/utils/location';
 
 export default function PreferenceSelector() {
   const [showModal, setShowModal] = useState(false);
   const { hasLocation } = useLocation({ autoRequest: false });
   const [isReady, setIsReady] = useState(false);
 
-  // Function to check and show preference modal
-  const checkAndShowPreference = useCallback((force = false) => {
-    // Don't show if user already set a preference
-    const storedPreference = getStoredPreference();
-    if (storedPreference) {
-      console.log('[PreferenceSelector] Preference already set:', storedPreference);
-      return;
-    }
-    
-    // Don't show if already prompted in this session (unless forced)
-    if (!force && hasPreferenceBeenPrompted()) {
-      console.log('[PreferenceSelector] Already prompted this session');
-      return;
-    }
-    
-    // Check if we have location
+  const checkAndShowPreference = useCallback(() => {
     if (!hasLocation) {
-      console.log('[PreferenceSelector] No location yet, waiting...');
       return;
     }
-    
-    console.log('[PreferenceSelector] Showing preference modal');
-    markPreferencePrompted();
+
     setShowModal(true);
     trackEvent(AnalyticsEvents.MODAL_OPEN, { modal_name: 'preference_selector' });
   }, [hasLocation]);
 
-  // Listen for location set event
   useEffect(() => {
-    const handleLocationSet = (e: CustomEvent<{ location: unknown; isFresh: boolean }>) => {
-      console.log('[PreferenceSelector] Location set event received:', e.detail);
-      // Small delay to allow LocationGate to fully close
+    const handleLocationSet = () => {
       setTimeout(() => {
-        checkAndShowPreference(true); // Force check when location is freshly set
-      }, 500);
+        checkAndShowPreference();
+      }, 300);
     };
 
     window.addEventListener('locationSet', handleLocationSet as EventListener);
@@ -58,21 +36,18 @@ export default function PreferenceSelector() {
     };
   }, [checkAndShowPreference]);
 
-  // Also check on mount (for page refresh case)
   useEffect(() => {
-    // Small delay to ensure everything is loaded
     const timer = setTimeout(() => {
       setIsReady(true);
-      checkAndShowPreference(false);
+      checkAndShowPreference();
     }, 100);
     
     return () => clearTimeout(timer);
   }, [checkAndShowPreference]);
 
-  // Check again when hasLocation changes
   useEffect(() => {
     if (isReady && hasLocation) {
-      checkAndShowPreference(false);
+      checkAndShowPreference();
     }
   }, [hasLocation, isReady, checkAndShowPreference]);
 
@@ -91,8 +66,6 @@ export default function PreferenceSelector() {
 
   const handleClose = () => {
     setShowModal(false);
-    // Mark as prompted even if user closes without selecting
-    markPreferencePrompted();
     trackEvent(AnalyticsEvents.MODAL_CLOSE, { modal_name: 'preference_selector' });
   };
 

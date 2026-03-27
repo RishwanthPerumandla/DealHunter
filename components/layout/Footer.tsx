@@ -1,58 +1,46 @@
 'use client';
 
 import Link from 'next/link';
-import { Heart, Github, Twitter } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Left */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">
-              Made with <Heart className="w-4 h-4 inline text-red-500 fill-current" /> for food lovers
-            </span>
+    <footer className="px-3 pb-4 pt-8 sm:px-4 sm:pb-5 sm:pt-10">
+      <div className="shell-container premium-surface rounded-[30px] px-6 py-6 sm:px-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-neutral-500">
+              DesiDeals
+            </p>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600">
+              A polished discovery layer for local food offers, restaurant specials, and happy
+              hour finds, starting with strong Indian and Desi coverage and expanding outward.
+            </p>
           </div>
 
-          {/* Center */}
-          <div className="flex items-center gap-6">
-            <Link href="/privacy" className="text-sm text-gray-500 hover:text-gray-700">
-              Privacy
-            </Link>
-            <Link href="/terms" className="text-sm text-gray-500 hover:text-gray-700">
-              Terms
-            </Link>
-            <Link href="/contact" className="text-sm text-gray-500 hover:text-gray-700">
-              Contact
-            </Link>
-          </div>
-
-          {/* Right */}
-          <div className="flex items-center gap-4">
-            <a
-              href="https://twitter.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <Link
+              href="/"
+              className="rounded-full border border-black/8 bg-white/70 px-4 py-2.5 text-neutral-600 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-neutral-950"
             >
-              <Twitter className="w-5 h-5" />
-            </a>
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              Home
+            </Link>
+            <Link
+              href="/about"
+              className="rounded-full border border-black/8 bg-white/70 px-4 py-2.5 text-neutral-600 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-neutral-950"
             >
-              <Github className="w-5 h-5" />
+              About
+            </Link>
+            <a
+              href="/admin"
+              className="rounded-full border border-black/8 bg-white/70 px-4 py-2.5 text-neutral-600 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-neutral-950"
+            >
+              Admin
             </a>
           </div>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-          <p className="text-xs text-gray-400">
-            © {new Date().getFullYear()} DesiDeals. Community-driven restaurant deals aggregator.
-          </p>
+        <div className="mt-6 border-t border-black/6 pt-5 text-xs uppercase tracking-[0.18em] text-neutral-400">
+          Curated local dining discovery, {new Date().getFullYear()}
         </div>
       </div>
     </footer>

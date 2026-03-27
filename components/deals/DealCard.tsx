@@ -1,23 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  ThumbsUp, 
-  ThumbsDown, 
-  MapPin, 
-  Tag,
-  Phone,
-  Navigation,
-  ChevronRight,
+import {
+  ArrowRight,
+  Clock3,
   Flame,
-  Percent,
-  Calendar,
-  Building2
+  MapPin,
+  Navigation,
+  Phone,
+  ThumbsDown,
+  ThumbsUp,
 } from 'lucide-react';
 import { Deal, VoteType } from '@/types';
 import { formatDistance, formatDays, isDealActive } from '@/lib/utils/location';
-import { trackDealClick, trackDealView } from '@/lib/utils/analytics';
+import { trackDealClick } from '@/lib/utils/analytics';
 
 interface DealCardProps {
   deal: Deal;
@@ -27,40 +24,51 @@ interface DealCardProps {
   featured?: boolean;
 }
 
-export default function DealCard({ deal, onVote, onClick, voting = false, featured = false }: DealCardProps) {
+export default function DealCard({
+  deal,
+  onVote,
+  onClick,
+  voting = false,
+  featured = false,
+}: DealCardProps) {
   const [imageError, setImageError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Check both time-based availability AND deal status
   const isTimeActive = isDealActive(deal);
   const isStatusActive = deal.status === 'active';
   const isActive = isTimeActive && isStatusActive;
-  
+
   const hasUpvoted = deal.user_vote === 'up';
   const hasDownvoted = deal.user_vote === 'down';
-  const hasDiscount = deal.discount_percentage && deal.discount_percentage > 0;
   const isHot = deal.score > 10;
-  
-  // Get restaurant info from joined fields
+
   const restaurantName = deal.restaurant_name || 'Unknown Restaurant';
-  const cuisineType = deal.cuisine_type;
   const restaurantPhone = deal.phone;
   const restaurantLat = deal.lat;
   const restaurantLng = deal.lng;
   const restaurantAddress = deal.address;
 
+  const primaryPrice = useMemo(() => {
+    if (deal.discounted_price) return `$${Number(deal.discounted_price).toFixed(2)}`;
+    if (deal.original_price) return `$${Number(deal.original_price).toFixed(2)}`;
+    return null;
+  }, [deal.discounted_price, deal.original_price]);
+
   const handleVote = (e: React.MouseEvent, type: VoteType) => {
     e.stopPropagation();
-    if (voting) return;
-    onVote(deal.id, type);
+    if (!voting) {
+      onVote(deal.id, type);
+    }
   };
 
   const handleGetDirections = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (restaurantLat && restaurantLng) {
       trackDealClick(deal.id, 'directions', restaurantName);
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurantLat},${restaurantLng}`;
-      window.open(url, '_blank');
+      window.open(
+        `https://www.google.com/maps/dir/?api=1&destination=${restaurantLat},${restaurantLng}`,
+        '_blank'
+      );
     }
   };
 
@@ -73,222 +81,169 @@ export default function DealCard({ deal, onVote, onClick, voting = false, featur
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, scale: 1.01 }}
-      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       onClick={() => onClick?.(deal)}
-      className={`
-        relative bg-white rounded-2xl overflow-hidden cursor-pointer
-        transition-shadow duration-300
-        ${featured ? 'ring-2 ring-[#FF9933] shadow-xl' : 'shadow-md hover:shadow-xl'}
-        ${onClick ? 'active:scale-[0.99]' : ''}
-        ${!isStatusActive ? 'opacity-75' : ''}
-      `}
+      className={`group cursor-pointer overflow-hidden rounded-[30px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,244,238,0.96))] shadow-[0_20px_44px_rgba(15,23,42,0.08)] transition-all duration-200 ${
+        featured
+          ? 'border-[#d2a568]/55 shadow-[0_24px_48px_rgba(210,165,104,0.16)]'
+          : 'border-black/6 hover:shadow-[0_24px_48px_rgba(15,23,42,0.12)]'
+      }`}
     >
-      <div className="flex flex-col sm:flex-row">
-        {/* Image Section */}
-        <div className="relative w-full sm:w-48 h-48 sm:h-auto flex-shrink-0 overflow-hidden bg-gray-100">
-          {deal.image_url && !imageError ? (
-            <motion.img
-              src={deal.image_url}
-              alt={deal.title}
-              className="w-full h-full object-cover"
-              onError={() => setImageError(true)}
-              animate={{ scale: isHovered ? 1.05 : 1 }}
-              transition={{ duration: 0.4 }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-green-50">
-              <Building2 className="w-16 h-16 text-orange-200" />
+      <div className="relative h-64 overflow-hidden sm:h-72">
+        {deal.image_url && !imageError ? (
+          <motion.img
+            src={deal.image_url}
+            alt={deal.title}
+            onError={() => setImageError(true)}
+            animate={{ scale: isHovered ? 1.035 : 1 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#f8efe1,#d4a46e,#6f8b5b)]">
+            <div className="rounded-full border border-white/25 bg-white/15 px-6 py-3 text-sm font-medium uppercase tracking-[0.2em] text-white backdrop-blur-sm">
+              Curated offer
             </div>
-          )}
-          
-          {/* Status Badge - Bottom Left */}
-          <div className="absolute bottom-3 left-3">
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg ${
-              isActive 
-                ? 'bg-green-500 text-white' 
-                : !isStatusActive
-                  ? 'bg-red-500 text-white'
-                  : 'bg-gray-500 text-white'
-            }`}>
-              {!isStatusActive ? '● Inactive' : isActive ? '● Active' : '○ Not Available'}
-            </span>
           </div>
+        )}
 
-          {/* Discount Badge - Top Left (below Featured badge if present) */}
-          {hasDiscount && (
-            <div className={`absolute left-3 ${featured ? 'top-10' : 'top-3'}`}>
-              <motion.div 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-[#FF9933] text-white shadow-lg"
-              >
-                <Percent className="w-3 h-3" />
-                {deal.discount_percentage}% OFF
-              </motion.div>
-            </div>
-          )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/62 via-black/14 to-transparent" />
 
-          {/* Hot Badge - Top Right */}
-          {isHot && (
-            <div className="absolute top-3 right-3 z-20">
-              <motion.div
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ repeat: Infinity, duration: 2 }}
-                className="flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg"
-              >
-                <Flame className="w-3 h-3" />
-                HOT
-              </motion.div>
-            </div>
-          )}
-
-          {/* Featured Badge - Top Left (highest priority) */}
+        <div className="absolute left-5 top-5 flex flex-wrap items-center gap-2">
           {featured && (
-            <div className="absolute top-0 left-0 z-20 px-3 py-1 bg-[#FF9933] text-white text-xs font-bold rounded-br-xl shadow-md">
-              Near You
-            </div>
+            <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-950 shadow-[0_12px_24px_rgba(15,23,42,0.1)]">
+              Near you
+            </span>
+          )}
+          {isHot && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#8f2d2d] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white shadow-[0_14px_24px_rgba(143,45,45,0.18)]">
+              <Flame className="h-3.5 w-3.5" />
+              Popular
+            </span>
           )}
         </div>
 
-        {/* Content Section */}
-        <div className="flex-1 p-4">
-          {/* Header */}
-          <div className="mb-3">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-lg font-bold text-gray-900 line-clamp-2 flex-1">
-                {deal.title}
-              </h3>
-              {onClick && (
-                <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 mt-1" />
-              )}
+        {primaryPrice && (
+          <div className="absolute bottom-5 right-5 rounded-[20px] bg-neutral-950/86 px-4 py-3 text-right text-white shadow-[0_16px_30px_rgba(17,17,17,0.18)] backdrop-blur-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/65">
+              Price
+            </p>
+            <p className="mt-1 text-2xl font-semibold">{primaryPrice}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-5 p-6 font-sans">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 rounded-full bg-black/[0.03] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+              {isActive ? 'Live now' : !isStatusActive ? 'Inactive' : 'Scheduled'}
             </div>
-            
-            {/* Restaurant Info */}
-            <div className="mt-2 space-y-1">
-              <p className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-[#FF9933]" />
-                {restaurantName}
+            <h3 className="mt-3 line-clamp-2 text-2xl font-semibold leading-tight text-neutral-950">
+              {deal.title}
+            </h3>
+            <p className="mt-2 text-base font-medium text-neutral-800">{restaurantName}</p>
+            {restaurantAddress && (
+              <p className="mt-2 flex items-center gap-2 text-sm leading-6 text-neutral-500">
+                <MapPin className="h-4 w-4 flex-shrink-0 text-neutral-400" />
+                <span className="line-clamp-2">{restaurantAddress}</span>
               </p>
-              {restaurantAddress && (
-                <p className="text-xs text-gray-500 flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {restaurantAddress}
-                  {deal.distance_miles !== undefined && deal.distance_miles > 0 && (
-                    <span className="text-green-600 font-medium">
-                      • {formatDistance(deal.distance_miles)} away
-                    </span>
-                  )}
-                </p>
-              )}
-            </div>
+            )}
           </div>
+          <ArrowRight className="mt-1 h-5 w-5 flex-shrink-0 text-neutral-400 transition-transform duration-200 group-hover:translate-x-0.5" />
+        </div>
 
-          {/* Tags */}
-          <div className="flex flex-wrap gap-2 mb-3">
-            {cuisineType && (
-              <span className="px-2 py-0.5 text-xs font-medium bg-orange-50 text-orange-700 rounded-full capitalize border border-orange-100">
-                {cuisineType.replace('_', ' ')}
-              </span>
-            )}
-            {deal.coupon_code && (
-              <span className="px-2 py-0.5 text-xs font-medium bg-yellow-50 text-yellow-700 rounded-full border border-yellow-100">
-                Code: {deal.coupon_code}
-              </span>
-            )}
-            <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-gray-50 text-gray-600 rounded-full">
-              <Calendar className="w-3 h-3" />
-              {formatDays(deal.days_available)}
+        <div className="flex flex-wrap gap-2">
+          {deal.cuisine_type && (
+            <span className="rounded-full border border-black/8 bg-black/[0.03] px-3 py-1.5 text-xs font-medium capitalize text-neutral-600">
+              {deal.cuisine_type.replace('_', ' ')}
             </span>
+          )}
+          <span className="inline-flex items-center gap-2 rounded-full border border-black/8 bg-black/[0.03] px-3 py-1.5 text-xs font-medium text-neutral-600">
+            <Clock3 className="h-3.5 w-3.5" />
+            {formatDays(deal.days_available)}
+          </span>
+          {deal.distance_miles !== undefined && deal.distance_miles > 0 && (
+            <span className="rounded-full border border-black/8 bg-black/[0.03] px-3 py-1.5 text-xs font-medium text-neutral-600">
+              {formatDistance(deal.distance_miles)}
+            </span>
+          )}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+          <div className="flex items-center gap-2 rounded-[22px] border border-black/8 bg-white/85 p-2 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
+            <motion.button
+              whileTap={{ scale: 0.94 }}
+              transition={{ duration: 0.1 }}
+              onClick={(e) => handleVote(e, 'up')}
+              disabled={voting}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-[16px] px-4 py-3 text-sm font-medium transition-all duration-150 ${
+                hasUpvoted
+                  ? 'bg-neutral-950 text-white shadow-[0_12px_22px_rgba(17,17,17,0.16)]'
+                  : 'text-neutral-700 hover:bg-black/[0.04] hover:text-neutral-950'
+              }`}
+            >
+              <ThumbsUp className={`h-4 w-4 ${hasUpvoted ? 'fill-current' : ''}`} />
+              Upvote
+              <span className={`rounded-full px-2 py-0.5 text-xs ${hasUpvoted ? 'bg-white/12' : 'bg-black/[0.05]'}`}>
+                {deal.upvotes}
+              </span>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.94 }}
+              transition={{ duration: 0.1 }}
+              onClick={(e) => handleVote(e, 'down')}
+              disabled={voting}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-[16px] px-4 py-3 text-sm font-medium transition-all duration-150 ${
+                hasDownvoted
+                  ? 'bg-[#8f2d2d] text-white shadow-[0_12px_22px_rgba(143,45,45,0.16)]'
+                  : 'text-neutral-700 hover:bg-black/[0.04] hover:text-neutral-950'
+              }`}
+            >
+              <ThumbsDown className={`h-4 w-4 ${hasDownvoted ? 'fill-current' : ''}`} />
+              Downvote
+              <span className={`rounded-full px-2 py-0.5 text-xs ${hasDownvoted ? 'bg-white/12' : 'bg-black/[0.05]'}`}>
+                {deal.downvotes}
+              </span>
+            </motion.button>
           </div>
 
-          {/* Price */}
-          {(deal.original_price || deal.discounted_price) && (
-            <div className="flex items-baseline gap-2 mb-3 flex-wrap">
-              {deal.discounted_price && (
-                <span className="text-2xl font-bold text-[#138808]">
-                  ${Number(deal.discounted_price).toFixed(2)}
-                </span>
-              )}
-              {deal.original_price && (
-                <span className="text-sm text-gray-400 line-through">
-                  ${Number(deal.original_price).toFixed(2)}
-                </span>
-              )}
-              {hasDiscount && deal.original_price && deal.discounted_price && (
-                <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                  Save ${(deal.original_price - deal.discounted_price).toFixed(2)}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Actions Bar */}
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-            {/* Vote Buttons */}
-            <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            {restaurantPhone && (
               <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={(e) => handleVote(e, 'up')}
-                disabled={voting}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  hasUpvoted 
-                    ? 'bg-green-100 text-green-700 ring-2 ring-green-200' 
-                    : 'bg-gray-50 text-gray-600 hover:bg-green-50 hover:text-green-600'
-                }`}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.12 }}
+                onClick={handleCall}
+                className="rounded-full border border-black/8 bg-white p-3 text-neutral-600 shadow-[0_12px_24px_rgba(15,23,42,0.05)] transition-all duration-150 hover:text-neutral-950"
+                title="Call restaurant"
               >
-                <ThumbsUp className={`w-4 h-4 ${hasUpvoted ? 'fill-current' : ''}`} />
-                <span>{deal.upvotes}</span>
+                <Phone className="h-4 w-4" />
               </motion.button>
-              
+            )}
+            {restaurantLat && restaurantLng && (
               <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={(e) => handleVote(e, 'down')}
-                disabled={voting}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  hasDownvoted 
-                    ? 'bg-red-100 text-red-700 ring-2 ring-red-200' 
-                    : 'bg-gray-50 text-gray-600 hover:bg-red-50 hover:text-red-600'
-                }`}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.12 }}
+                onClick={handleGetDirections}
+                className="rounded-full border border-black/8 bg-white p-3 text-neutral-600 shadow-[0_12px_24px_rgba(15,23,42,0.05)] transition-all duration-150 hover:text-neutral-950"
+                title="Directions"
               >
-                <ThumbsDown className={`w-4 h-4 ${hasDownvoted ? 'fill-current' : ''}`} />
-                <span>{deal.downvotes}</span>
+                <Navigation className="h-4 w-4" />
               </motion.button>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex items-center gap-1">
-              {restaurantPhone && (
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={handleCall}
-                  className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors"
-                  title="Call restaurant"
-                >
-                  <Phone className="w-4 h-4" />
-                </motion.button>
-              )}
-              {restaurantLat && restaurantLng && (
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={handleGetDirections}
-                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                  title="Get directions"
-                >
-                  <Navigation className="w-4 h-4" />
-                </motion.button>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
-    </motion.div>
+    </motion.article>
   );
 }

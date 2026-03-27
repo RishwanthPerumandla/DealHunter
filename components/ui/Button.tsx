@@ -24,20 +24,26 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    const baseStyles = 'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] hover:scale-[1.02]';
-    
+    const baseStyles =
+      'group inline-flex items-center justify-center gap-2 rounded-full font-medium transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-black/20 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55';
+
     const variants = {
-      primary: 'bg-[#FF9933] text-white hover:bg-[#E88820] focus:ring-[#FF9933] shadow-lg shadow-orange-200',
-      secondary: 'bg-[#138808] text-white hover:bg-[#0F6B06] focus:ring-[#138808] shadow-lg shadow-green-200',
-      outline: 'border-2 border-[#FF9933] text-[#FF9933] hover:bg-orange-50 focus:ring-[#FF9933]',
-      ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-400',
-      danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500',
+      primary:
+        'bg-neutral-950 text-white shadow-[0_16px_34px_rgba(17,17,17,0.16)] hover:-translate-y-0.5 hover:shadow-[0_22px_44px_rgba(17,17,17,0.22)]',
+      secondary:
+        'bg-[#2e5d4b] text-white shadow-[0_16px_34px_rgba(46,93,75,0.18)] hover:-translate-y-0.5 hover:shadow-[0_22px_44px_rgba(46,93,75,0.22)]',
+      outline:
+        'border border-black/10 bg-white/80 text-neutral-900 shadow-[0_12px_30px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 hover:bg-white',
+      ghost:
+        'bg-transparent text-neutral-700 hover:bg-black/[0.04] hover:text-neutral-950',
+      danger:
+        'bg-[#8f2d2d] text-white shadow-[0_16px_34px_rgba(143,45,45,0.2)] hover:-translate-y-0.5 hover:shadow-[0_22px_44px_rgba(143,45,45,0.24)]',
     };
-    
+
     const sizes = {
-      sm: 'px-3 py-1.5 text-sm',
-      md: 'px-4 py-2.5 text-base',
-      lg: 'px-6 py-3 text-lg',
+      sm: 'px-4 py-2 text-sm',
+      md: 'px-5 py-3 text-[15px]',
+      lg: 'px-6 py-3.5 text-base',
     };
 
     return (
@@ -48,13 +54,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           ${variants[variant]}
           ${sizes[size]}
           ${fullWidth ? 'w-full' : ''}
-          ${disabled || loading ? 'hover:scale-100' : ''}
           ${className}
         `}
         disabled={disabled || loading}
         {...props}
       >
-        {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
         {children}
       </button>
     );

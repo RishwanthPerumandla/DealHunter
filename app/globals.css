@@ -3,38 +3,100 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 249, 247, 244;
-  --background-end-rgb: 255, 255, 255;
+  --foreground-rgb: 18, 18, 18;
+  --background-base: 243, 239, 232;
+  --surface: 255, 252, 247;
+  --surface-strong: 255, 255, 255;
+  --border-soft: 214, 208, 199;
+  --shadow-soft: 15, 23, 42;
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
   }
-  
+
   body {
     color: rgb(var(--foreground-rgb));
-    background: linear-gradient(
-      to bottom,
-      rgb(var(--background-start-rgb)),
-      rgb(var(--background-end-rgb))
-    );
+    background: rgb(var(--background-base));
+    font-family: var(--font-sans), system-ui, sans-serif;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display), Georgia, serif;
+    letter-spacing: -0.03em;
+  }
+
+  * {
+    border-color: rgba(var(--border-soft), 0.45);
+  }
+
+  *:focus-visible {
+    outline: 2px solid rgba(17, 17, 17, 0.7);
+    outline-offset: 2px;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  img {
+    background-color: rgba(0, 0, 0, 0.03);
+  }
+}
+
+@layer components {
+  .shell-container {
+    @apply mx-auto w-full max-w-[1240px] px-5 sm:px-6 lg:px-10;
+  }
+
+  .editorial-section {
+    @apply py-12 sm:py-16 lg:py-24;
+  }
+
+  .premium-surface {
+    background: linear-gradient(180deg, rgba(var(--surface-strong), 0.94) 0%, rgba(var(--surface), 0.9) 100%);
+    border: 1px solid rgba(var(--border-soft), 0.38);
+    box-shadow:
+      0 1px 1px rgba(var(--shadow-soft), 0.03),
+      0 18px 40px rgba(var(--shadow-soft), 0.07);
+    backdrop-filter: blur(14px);
+  }
+
+  .premium-card {
+    @apply premium-surface rounded-[28px];
+  }
+
+  .premium-pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-600 shadow-[0_8px_24px_rgba(15,23,42,0.06)];
+  }
+
+  .nav-pill {
+    @apply rounded-full px-4 py-2 text-sm font-medium text-neutral-600 transition-all duration-200;
+  }
+
+  .nav-pill-active {
+    @apply bg-neutral-950 text-white shadow-[0_12px_28px_rgba(17,17,17,0.18)];
   }
 }
 
 @layer utilities {
-  /* Custom scrollbar */
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  .text-balance {
+    text-wrap: balance;
   }
 
-  /* Line clamp utilities */
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -48,17 +110,23 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
-/* Custom animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -73,14 +141,15 @@
   }
 }
 
-@keyframes pulse-ring {
-  0% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
+@keyframes floatGlow {
+  0%,
   100% {
-    transform: scale(1.2);
-    opacity: 0;
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-6px);
+    opacity: 1;
   }
 }
 
@@ -89,42 +158,15 @@
 }
 
 .animate-slide-up {
-  animation: slideUp 0.5s ease-out forwards;
+  animation: slideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* Pull to refresh animation */
-@keyframes pull-rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+.animate-float-glow {
+  animation: floatGlow 7s ease-in-out infinite;
 }
 
-.animate-pull-rotate {
-  animation: pull-rotate 1s linear infinite;
-}
-
-/* Focus visible styles */
-*:focus-visible {
-  outline: 2px solid #FF9933;
-  outline-offset: 2px;
-}
-
-/* Button active states */
-button:active {
-  transform: scale(0.98);
-}
-
-/* Image loading placeholder */
-img {
-  background-color: #f3f4f6;
-}
-
-/* Mobile touch improvements */
 @media (hover: none) {
-  .hover\:bg-gray-100:active {
-    background-color: #f3f4f6;
+  button:active {
+    transform: scale(0.985);
   }
 }

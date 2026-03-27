@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, SlidersHorizontal, MapPin, Sparkles, Zap, Search, Compass, Utensils, Globe } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Clock3, Compass, RefreshCw, Zap } from 'lucide-react';
 import { useDeals } from '@/hooks/useDeals';
 import { useLocation } from '@/hooks/useLocation';
 import DealCard from './DealCard';
@@ -11,52 +11,46 @@ import DealDetailModal from './DealDetailModal';
 import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
 import { Deal, VoteType } from '@/types';
-import { getStoredPreference, CuisinePreference, setStoredPreference } from '@/components/PreferenceModal';
+import { getStoredPreference, CuisinePreference } from '@/components/PreferenceModal';
 
 const cuisineOptions = [
-  { value: 'all', label: 'All Cuisines' },
-  { value: 'indian', label: '🇮🇳 Indian' },
-  { value: 'desi', label: '🍛 Desi/Street' },
-  { value: 'continental', label: '🍽️ Continental' },
-  { value: 'fast_food', label: '🍕 Fast Food' },
-  { value: 'chinese', label: '🥡 Chinese' },
+  { value: 'all', label: 'All cuisines' },
+  { value: 'indian', label: 'Indian' },
+  { value: 'desi', label: 'Desi' },
+  { value: 'continental', label: 'Continental' },
+  { value: 'fast_food', label: 'American / Fast food' },
+  { value: 'chinese', label: 'Chinese' },
+  { value: 'other', label: 'Other' },
 ];
 
 const sortOptions = [
-  { value: 'distance', label: '📍 Nearest' },
-  { value: 'score', label: '🔥 Popular' },
-  { value: 'discount', label: '💰 Best Deal' },
-  { value: 'newest', label: '✨ Newest' },
+  { value: 'distance', label: 'Nearest first' },
+  { value: 'score', label: 'Most loved' },
+  { value: 'discount', label: 'Best value' },
+  { value: 'newest', label: 'Newest arrivals' },
 ];
 
-// Get cuisine label from preference
-function getPreferenceLabel(preference: CuisinePreference): string {
-  switch (preference) {
-    case 'desi': return 'Desi Deals';
-    case 'other': return 'Other Cuisines';
-    default: return 'All Cuisines';
-  }
-}
+function isHappyHourDeal(deal: Deal): boolean {
+  const haystack = [
+    deal.title,
+    deal.description || '',
+    deal.terms_conditions || '',
+    deal.coupon_code || '',
+  ]
+    .join(' ')
+    .toLowerCase();
 
-// Get cuisine icon from preference
-function getPreferenceIcon(preference: CuisinePreference) {
-  switch (preference) {
-    case 'desi': return <Utensils className="w-4 h-4" />;
-    case 'other': return <Globe className="w-4 h-4" />;
-    default: return null;
-  }
+  return haystack.includes('happy hour') || haystack.includes('hh ') || haystack.includes('after work');
 }
 
 export default function DealList() {
-  const { location, hasLocation } = useLocation();
+  const { location } = useLocation();
   const [selectedCuisine, setSelectedCuisine] = useState('all');
   const [sortBy, setSortBy] = useState('distance');
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
-  const [locationHighlighted, setLocationHighlighted] = useState(false);
   const [cuisinePreference, setCuisinePreference] = useState<CuisinePreference>(null);
+  const [featureFilter, setFeatureFilter] = useState<'all' | 'happy_hour'>('all');
 
-  // Load stored preference on mount
   useEffect(() => {
     const stored = getStoredPreference();
     if (stored) {
@@ -64,23 +58,31 @@ export default function DealList() {
     }
   }, []);
 
-  // Listen for preference changes from the PreferenceSelector
   useEffect(() => {
     const handlePreferenceChange = (e: CustomEvent<{ preference: CuisinePreference }>) => {
       setCuisinePreference(e.detail.preference);
+      if (e.detail.preference === 'desi') {
+        setSelectedCuisine('all');
+      }
+    };
+
+    const handleCuisineSelect = (e: CustomEvent<{ cuisine: string }>) => {
+      setSelectedCuisine(e.detail.cuisine);
+      const exploreSection = document.getElementById('explore');
+      exploreSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     window.addEventListener('preferenceChanged', handlePreferenceChange as EventListener);
+    window.addEventListener('headerCuisineSelect', handleCuisineSelect as EventListener);
+
     return () => {
       window.removeEventListener('preferenceChanged', handlePreferenceChange as EventListener);
+      window.removeEventListener('headerCuisineSelect', handleCuisineSelect as EventListener);
     };
   }, []);
 
-  // Override cuisine filter if preference is set (unless user explicitly selects a cuisine)
-  const effectiveCuisineFilter = selectedCuisine !== 'all' 
-    ? [selectedCuisine] 
-    : [];
-  
+  const effectiveCuisineFilter = selectedCuisine !== 'all' ? [selectedCuisine] : [];
+
   const { deals, fallbackDeals, loading, error, refetch, vote, voting } = useDeals({
     zipcode: location.zipcode,
     cuisineFilter: effectiveCuisineFilter,
@@ -88,24 +90,6 @@ export default function DealList() {
     useZipcodeMode: true,
   });
 
-  // Handle preference toggle
-  const handlePreferenceToggle = (preference: CuisinePreference) => {
-    setCuisinePreference(preference);
-    setStoredPreference(preference);
-    // Reset explicit cuisine filter when using preference
-    setSelectedCuisine('all');
-  };
-
-  // Highlight location when it's first set
-  useEffect(() => {
-    if (hasLocation && !locationHighlighted) {
-      setLocationHighlighted(true);
-      const timer = setTimeout(() => setLocationHighlighted(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [hasLocation, locationHighlighted]);
-
-  // Sort deals
   const sortDeals = (dealsToSort: Deal[]) => {
     return [...dealsToSort].sort((a, b) => {
       switch (sortBy) {
@@ -116,370 +100,273 @@ export default function DealList() {
         case 'newest':
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case 'distance':
-        default:
+        default: {
           const aSameZip = a.restaurant_zipcode === location.zipcode ? 0 : 1;
           const bSameZip = b.restaurant_zipcode === location.zipcode ? 0 : 1;
           if (aSameZip !== bSameZip) return aSameZip - bSameZip;
           return (a.distance_miles || 999) - (b.distance_miles || 999);
+        }
       }
     });
   };
 
-  // Separate deals by location relevance
-  const sortedDeals = sortDeals(deals);
-  const sortedFallbackDeals = sortDeals(fallbackDeals);
-  const sameZipDeals = sortedDeals.filter(d => d.restaurant_zipcode === location.zipcode);
-  const nearbyDeals = sortedDeals.filter(d => d.restaurant_zipcode !== location.zipcode);
+  const featureFilteredDeals = (items: Deal[]) =>
+    featureFilter === 'happy_hour' ? items.filter(isHappyHourDeal) : items;
 
-  const hasNoDealsInArea = deals.length === 0 && fallbackDeals.length === 0;
-  const hasOnlyFallbackDeals = deals.length === 0 && fallbackDeals.length > 0;
+  const sortedDeals = sortDeals(featureFilteredDeals(deals));
+  const sortedFallbackDeals = sortDeals(featureFilteredDeals(fallbackDeals));
+  const sameZipDeals = sortedDeals.filter((d) => d.restaurant_zipcode === location.zipcode);
+  const nearbyDeals = sortedDeals.filter((d) => d.restaurant_zipcode !== location.zipcode);
+  const allVisibleDeals = [...sameZipDeals, ...nearbyDeals, ...sortedFallbackDeals];
+  const happyHourDeals = allVisibleDeals.filter(isHappyHourDeal);
+
+  const hasNoDealsInArea = sortedDeals.length === 0 && sortedFallbackDeals.length === 0;
+  const hasOnlyFallbackDeals = sortedDeals.length === 0 && sortedFallbackDeals.length > 0;
 
   const handleVote = (dealId: string, voteType: VoteType) => {
     vote({ dealId, voteType });
   };
 
-  const handleRefresh = () => {
-    refetch();
-  };
-
-  const handleDealClick = (deal: Deal) => {
-    setSelectedDeal(deal);
-  };
-
   return (
-    <div className="min-h-screen">
-      {/* Location Selector */}
+    <section className="editorial-section space-y-8 pt-0 sm:space-y-10" id="explore">
       <LocationSelector onLocationChange={refetch} />
 
-      {/* Location Status Banner */}
-      <AnimatePresence>
-        {hasLocation && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="bg-gradient-to-r from-[#138808] to-[#0F6B06] text-white"
-          >
-            <div className="max-w-3xl mx-auto px-4 py-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                <span className="text-sm">
-                  {getPreferenceLabel(cuisinePreference)} near <span className="font-bold">{location.city || location.zipcode}</span>
-                </span>
-                {cuisinePreference && (
-                  <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded">
-                    {getPreferenceIcon(cuisinePreference)}
-                  </span>
-                )}
+      <div className="shell-container space-y-6">
+        <div className="premium-card overflow-hidden">
+          <div className="border-b border-black/6 px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
+                  Explore the feed
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral-950 sm:text-3xl">
+                  Filter by cuisine, type, and timing
+                </h2>
               </div>
-              {sameZipDeals.length > 0 && (
-                <div className="flex items-center gap-1 text-xs bg-white/20 px-2 py-0.5 rounded-full">
-                  <Sparkles className="w-3 h-3" />
-                  {sameZipDeals.length} nearby
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} options={sortOptions} className="min-w-[190px]" />
+                <Button variant="ghost" onClick={() => refetch()} disabled={loading}>
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* Filters Bar */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-3xl mx-auto px-4 py-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                showFilters 
-                  ? 'bg-[#FF9933] text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              <span className="hidden sm:inline">Filters</span>
-            </button>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {cuisineOptions.map((cuisine) => (
+                <button
+                  key={cuisine.value}
+                  onClick={() => setSelectedCuisine(cuisine.value)}
+                  className={`rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
+                    selectedCuisine === cuisine.value
+                      ? 'bg-neutral-950 text-white shadow-[0_16px_30px_rgba(17,17,17,0.14)]'
+                      : 'border border-black/8 bg-white/80 text-neutral-600 hover:bg-white hover:text-neutral-950'
+                  }`}
+                >
+                  {cuisine.label}
+                </button>
+              ))}
+            </div>
 
-            <Select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              options={sortOptions}
-              className="!py-2 !text-sm flex-1"
-            />
-
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={handleRefresh}
-              disabled={loading}
-              className="p-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </motion.button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[
+                { value: 'all' as const, label: 'All deals' },
+                { value: 'happy_hour' as const, label: 'Happy hour' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setFeatureFilter(option.value)}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    featureFilter === option.value
+                      ? 'bg-[#2e5d4b] text-white shadow-[0_14px_28px_rgba(46,93,75,0.16)]'
+                      : 'border border-black/8 bg-white/75 text-neutral-600 hover:bg-white hover:text-neutral-950'
+                  }`}
+                >
+                  {option.value === 'happy_hour' && <Clock3 className="h-4 w-4" />}
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                {/* Cuisine Preference Toggle */}
-                <div className="pt-3 mt-3 border-t border-gray-100">
-                  <p className="text-xs text-gray-500 mb-2 font-medium">Quick Filters</p>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <button
-                      onClick={() => handlePreferenceToggle('desi')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all ${
-                        cuisinePreference === 'desi'
-                          ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
-                          : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
-                      }`}
-                    >
-                      <Utensils className="w-3.5 h-3.5" />
-                      Desi Deals
-                    </button>
-                    <button
-                      onClick={() => handlePreferenceToggle('other')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all ${
-                        cuisinePreference === 'other'
-                          ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md'
-                          : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
-                      }`}
-                    >
-                      <Globe className="w-3.5 h-3.5" />
-                      Other Cuisines
-                    </button>
-                    <button
-                      onClick={() => handlePreferenceToggle(null)}
-                      className={`px-3 py-1.5 rounded-full text-sm transition-all ${
-                        cuisinePreference === null
-                          ? 'bg-gray-800 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      Show All
-                    </button>
+          <div className="px-5 py-6 sm:px-6 sm:py-8">
+            {loading ? (
+              <div className="grid gap-5 lg:grid-cols-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="overflow-hidden rounded-[28px] border border-black/6 bg-white/75 shadow-[0_16px_34px_rgba(15,23,42,0.05)]"
+                  >
+                    <div className="h-56 animate-pulse bg-neutral-200/80" />
+                    <div className="space-y-3 p-6">
+                      <div className="h-7 w-2/3 animate-pulse rounded-full bg-neutral-200/80" />
+                      <div className="h-4 w-1/2 animate-pulse rounded-full bg-neutral-200/70" />
+                      <div className="h-4 w-full animate-pulse rounded-full bg-neutral-200/70" />
+                    </div>
                   </div>
+                ))}
+              </div>
+            ) : error ? (
+              <div className="rounded-[28px] border border-red-200 bg-red-50/80 px-6 py-10 text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-red-500 shadow-[0_16px_34px_rgba(239,68,68,0.08)]">
+                  <Zap className="h-8 w-8" />
                 </div>
+                <h3 className="mt-5 text-2xl font-semibold text-neutral-950">The feed needs a refresh</h3>
+                <p className="mx-auto mt-3 max-w-lg text-neutral-500">
+                  We hit a snag while loading the latest offers. Try again and we will pull a fresh
+                  set of nearby deals.
+                </p>
+                <Button onClick={() => refetch()} variant="outline" className="mt-6">
+                  Try again
+                </Button>
+              </div>
+            ) : hasNoDealsInArea ? (
+              <div className="rounded-[30px] border border-black/6 bg-white/70 px-6 py-12 text-center shadow-[0_18px_38px_rgba(15,23,42,0.05)]">
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-neutral-950 text-white shadow-[0_22px_44px_rgba(17,17,17,0.16)]">
+                  <Compass className="h-9 w-9" />
+                </div>
+                <h3 className="mt-6 text-3xl font-semibold text-neutral-950">Nothing nearby yet</h3>
+                <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-neutral-500">
+                  We could not find live offers around {location.zipcode || 'your area'} right now.
+                  Try another ZIP code or check back soon.
+                </p>
+                <Button onClick={() => refetch()} variant="outline" className="mt-6">
+                  Refresh offers
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-10">
+                {featureFilter === 'all' && happyHourDeals.length > 0 && (
+                  <section className="space-y-5">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                          Happy hour nearby
+                        </p>
+                        <h3 className="mt-2 text-3xl font-semibold text-neutral-950">
+                          Best after-work picks
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="grid gap-6 lg:grid-cols-2">
+                      {happyHourDeals.slice(0, 4).map((deal, index) => (
+                        <motion.div
+                          key={`happy-${deal.id}`}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.04, duration: 0.22 }}
+                        >
+                          <DealCard deal={deal} onVote={handleVote} onClick={setSelectedDeal} voting={voting} />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
-                {/* Detailed Cuisine Type Filter */}
-                <div className="pt-3 border-t border-gray-100">
-                  <p className="text-xs text-gray-500 mb-2 font-medium">Cuisine Type</p>
-                  <div className="flex flex-wrap gap-2">
-                    {cuisineOptions.map((cuisine) => (
-                      <button
-                        key={cuisine.value}
-                        onClick={() => setSelectedCuisine(cuisine.value)}
-                        className={`px-3 py-1.5 rounded-full text-sm transition-all ${
-                          selectedCuisine === cuisine.value
-                            ? 'bg-[#FF9933] text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {cuisine.label}
-                      </button>
-                    ))}
+                {sameZipDeals.length > 0 && (
+                  <section className="space-y-5">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                          Closest to you
+                        </p>
+                        <h3 className="mt-2 text-3xl font-semibold text-neutral-950">
+                          In {location.city || location.zipcode}
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="grid gap-6 lg:grid-cols-2">
+                      {sameZipDeals.map((deal, index) => (
+                        <motion.div
+                          key={deal.id}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.04, duration: 0.22 }}
+                        >
+                          <DealCard
+                            deal={deal}
+                            onVote={handleVote}
+                            onClick={setSelectedDeal}
+                            voting={voting}
+                            featured
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {hasOnlyFallbackDeals && (
+                  <div className="rounded-[26px] border border-blue-200 bg-blue-50/80 px-5 py-5 shadow-[0_16px_34px_rgba(59,130,246,0.06)]">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-full bg-white p-2 text-blue-600">
+                        <Compass className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-blue-900">No live picks in {location.zipcode}</p>
+                        <p className="mt-1 text-sm leading-7 text-blue-700">
+                          Showing strong alternatives from nearby areas.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
+                )}
+
+                {nearbyDeals.length > 0 && (
+                  <section className="space-y-5">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                        Nearby neighborhoods
+                      </p>
+                      <h3 className="mt-2 text-3xl font-semibold text-neutral-950">
+                        Worth a short drive
+                      </h3>
+                    </div>
+                    <div className="grid gap-6 lg:grid-cols-2">
+                      {nearbyDeals.map((deal, index) => (
+                        <motion.div
+                          key={deal.id}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.04, duration: 0.22 }}
+                        >
+                          <DealCard deal={deal} onVote={handleVote} onClick={setSelectedDeal} voting={voting} />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {sortedFallbackDeals.length > 0 && (
+                  <section className="space-y-5">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                        Recommended next
+                      </p>
+                      <h3 className="mt-2 text-3xl font-semibold text-neutral-950">
+                        More city highlights
+                      </h3>
+                    </div>
+                    <div className="grid gap-6 lg:grid-cols-2">
+                      {sortedFallbackDeals.map((deal, index) => (
+                        <motion.div
+                          key={deal.id}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.04, duration: 0.22 }}
+                        >
+                          <DealCard deal={deal} onVote={handleVote} onClick={setSelectedDeal} voting={voting} />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
             )}
-          </AnimatePresence>
+          </div>
         </div>
       </div>
 
-      {/* Deals List */}
-      <div className="max-w-3xl mx-auto px-4 py-4 pb-20">
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <motion.div 
-                key={i} 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.1 }}
-                className="bg-white rounded-2xl shadow-lg p-4 animate-pulse"
-              >
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="w-full sm:w-48 h-48 bg-gray-200 rounded-xl flex-shrink-0"></div>
-                  <div className="flex-1 space-y-3">
-                    <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                    <div className="flex gap-2 pt-4">
-                      <div className="h-8 bg-gray-200 rounded-full w-20"></div>
-                      <div className="h-8 bg-gray-200 rounded-full w-20"></div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        ) : error ? (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-12"
-          >
-            <div className="w-20 h-20 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-              <Zap className="w-10 h-10 text-red-500" />
-            </div>
-            <p className="text-gray-600 mb-4">Failed to load deals. Please try again.</p>
-            <Button onClick={handleRefresh} variant="outline">
-              Retry
-            </Button>
-          </motion.div>
-        ) : hasNoDealsInArea ? (
-          // Empty State - No deals at all
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-12"
-          >
-            <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-orange-100 to-orange-50 rounded-full flex items-center justify-center">
-              <Search className="w-12 h-12 text-[#FF9933]" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No deals found</h3>
-            <p className="text-gray-500 mb-2 max-w-sm mx-auto">
-              We couldn&apos;t find any deals near {location.zipcode || 'your location'}.
-            </p>
-            <p className="text-sm text-gray-400 mb-6">
-              Try a different ZIP code or check back later!
-            </p>
-            <Button onClick={handleRefresh} variant="outline">
-              Refresh
-            </Button>
-          </motion.div>
-        ) : (
-          <div className="space-y-4">
-            {/* Same ZIP Code Deals - Featured */}
-            {sameZipDeals.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-3"
-              >
-                <div className="flex items-center gap-2 px-1">
-                  <Sparkles className="w-4 h-4 text-[#FF9933]" />
-                  <h2 className="text-sm font-semibold text-gray-700">
-                    In {location.city || location.zipcode}
-                  </h2>
-                  <span className="text-xs text-gray-400">({sameZipDeals.length})</span>
-                </div>
-                <div className="space-y-3">
-                  {sameZipDeals.map((deal, index) => (
-                    <motion.div
-                      key={deal.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <DealCard
-                        deal={deal}
-                        onVote={handleVote}
-                        onClick={handleDealClick}
-                        voting={voting}
-                        featured
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* No deals in your zipcode message */}
-            {hasOnlyFallbackDeals && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3"
-              >
-                <Compass className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="font-medium text-blue-800">
-                    No deals in {location.zipcode}
-                  </p>
-                  <p className="text-sm text-blue-600">
-                    Showing popular deals from other areas. Check them out or try a different location!
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Nearby Deals (same zipcode but different area or nearby areas) */}
-            {nearbyDeals.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className={`space-y-3 ${sameZipDeals.length > 0 ? 'pt-4 border-t border-gray-200' : ''}`}
-              >
-                <div className="flex items-center gap-2 px-1">
-                  <MapPin className="w-4 h-4 text-gray-400" />
-                  <h2 className="text-sm font-semibold text-gray-600">
-                    Nearby Areas
-                  </h2>
-                  <span className="text-xs text-gray-400">({nearbyDeals.length})</span>
-                </div>
-                <div className="space-y-3">
-                  {nearbyDeals.map((deal, index) => (
-                    <motion.div
-                      key={deal.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <DealCard
-                        deal={deal}
-                        onVote={handleVote}
-                        onClick={handleDealClick}
-                        voting={voting}
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* Fallback Deals (from other zipcodes when no local deals) */}
-            {sortedFallbackDeals.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="space-y-3 pt-4 border-t border-gray-200"
-              >
-                <div className="flex items-center gap-2 px-1">
-                  <Compass className="w-4 h-4 text-[#FF9933]" />
-                  <h2 className="text-sm font-semibold text-gray-700">
-                    Recommended Deals
-                  </h2>
-                  <span className="text-xs text-gray-400">({sortedFallbackDeals.length})</span>
-                </div>
-                <div className="space-y-3">
-                  {sortedFallbackDeals.map((deal, index) => (
-                    <motion.div
-                      key={deal.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <DealCard
-                        deal={deal}
-                        onVote={handleVote}
-                        onClick={handleDealClick}
-                        voting={voting}
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Deal Detail Modal */}
       <DealDetailModal
         deal={selectedDeal}
         isOpen={!!selectedDeal}
@@ -487,6 +374,6 @@ export default function DealList() {
         onVote={handleVote}
         voting={voting}
       />
-    </div>
+    </section>
   );
 }

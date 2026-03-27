@@ -13,31 +13,24 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
             {label}
-            {props.required && <span className="text-red-500 ml-1">*</span>}
+            {props.required && <span className="ml-1 text-red-500">*</span>}
           </label>
         )}
         <input
           ref={ref}
           className={`
-            w-full px-4 py-3 rounded-xl border-2 transition-all duration-200
-            placeholder:text-gray-400
-            focus:outline-none focus:ring-2 focus:ring-offset-0
-            ${error 
-              ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
-              : 'border-gray-200 focus:border-[#FF9933] focus:ring-orange-100'
-            }
+            w-full rounded-[22px] border bg-white/85 px-4 py-3.5 text-[15px] text-neutral-900 shadow-[0_10px_30px_rgba(15,23,42,0.04)] transition-all duration-300
+            placeholder:text-neutral-400
+            focus:border-black/20 focus:bg-white focus:outline-none focus:ring-4
+            ${error ? 'border-red-300 focus:ring-red-100' : 'border-black/8 focus:ring-black/5'}
             ${className}
           `}
           {...props}
         />
-        {error && (
-          <p className="mt-1.5 text-sm text-red-600">{error}</p>
-        )}
-        {helperText && !error && (
-          <p className="mt-1.5 text-sm text-gray-500">{helperText}</p>
-        )}
+        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        {helperText && !error && <p className="mt-2 text-sm text-neutral-500">{helperText}</p>}
       </div>
     );
   }
